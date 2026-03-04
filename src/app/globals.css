@@ -142,12 +142,14 @@ html, body {
   display: flex;
   align-items: center;
   gap: var(--space-md);
+  flex-shrink: 0;
 }
 
 .header__logo {
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.02em;
+  white-space: nowrap;
   background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -160,12 +162,39 @@ html, body {
   font-weight: 400;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .header__controls {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Scrollable area for region + time buttons */
+.header__controls-scroll {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE */
+  min-width: 0;
+  flex: 1;
+}
+
+.header__controls-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Right-side actions that must always be visible */
+.header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
 }
 
 /* ─── Buttons ─────────────────────────────────────────────── */

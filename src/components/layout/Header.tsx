@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useStore } from "@/core/state/store";
 import { dataBus } from "@/core/data/DataBus";
 import { pluginManager } from "@/core/plugins/PluginManager";
@@ -25,6 +26,25 @@ export function Header() {
     const toggleLeftSidebar = useStore((s) => s.toggleLeftSidebar);
     const toggleConfigPanel = useStore((s) => s.toggleConfigPanel);
 
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const el = scrollContainerRef.current;
+        if (!el) return;
+
+        const handleWheel = (e: WheelEvent) => {
+            // Check if there is a vertical scroll (e.deltaY)
+            if (e.deltaY !== 0) {
+                // If so, translate it to horizontal scroll
+                e.preventDefault();
+                el.scrollLeft += e.deltaY;
+            }
+        };
+
+        el.addEventListener("wheel", handleWheel, { passive: false });
+        return () => el.removeEventListener("wheel", handleWheel);
+    }, []);
+
     return (
         <header className="header glass-panel">
             <div className="header__brand">
@@ -41,55 +61,61 @@ export function Header() {
                 </div>
             </div>
             <div className="header__controls">
-                <SearchBar />
-                {/* Separator */}
-                <div style={{ width: 1, height: 20, background: "var(--border-subtle)", margin: "0 var(--space-sm)" }} />
-                {/* Region presets */}
-                {REGIONS.map((r) => (
+                {/* Scrollable section: search + region presets + time windows */}
+                <div className="header__controls-scroll" ref={scrollContainerRef}>
+                    <SearchBar />
+                    {/* Separator */}
+                    <div style={{ width: 1, height: 20, background: "var(--border-subtle)", flexShrink: 0, margin: "0 var(--space-sm)" }} />
+                    {/* Region presets */}
+                    {REGIONS.map((r) => (
+                        <button
+                            key={r.id}
+                            className="btn btn--glow"
+                            onClick={() => dataBus.emit("cameraPreset", { presetId: r.id })}
+                            title={r.label}
+                            style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}
+                        >
+                            <r.icon size={14} />
+                            {r.label}
+                        </button>
+                    ))}
+                    {/* Separator */}
+                    <div style={{ width: 1, height: 20, background: "var(--border-subtle)", flexShrink: 0 }} />
+                    {/* Time windows */}
+                    {TIME_WINDOWS.map((tw) => (
+                        <button
+                            key={tw}
+                            className={`btn ${timeWindow === tw ? "btn--active" : ""}`}
+                            style={{ flexShrink: 0 }}
+                            onClick={() => {
+                                setTimeWindow(tw);
+                                const range = useStore.getState().timeRange;
+                                pluginManager.updateTimeRange(range);
+                            }}
+                        >
+                            {tw}
+                        </button>
+                    ))}
+                </div>
+                {/* Always-visible right-side actions */}
+                <div className="header__actions">
+                    {/* Separator */}
+                    <div style={{ width: 1, height: 20, background: "var(--border-subtle)" }} />
+                    {/* Config Toggle */}
                     <button
-                        key={r.id}
-                        className="btn btn--glow"
-                        onClick={() => dataBus.emit("cameraPreset", { presetId: r.id })}
-                        title={r.label}
-                        style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                        className="btn btn--icon btn--glow"
+                        onClick={toggleConfigPanel}
+                        title="Data Configuration"
                     >
-                        <r.icon size={14} />
-                        {r.label}
+                        <Settings size={18} />
                     </button>
-                ))}
-                {/* Separator */}
-                <div style={{ width: 1, height: 20, background: "var(--border-subtle)" }} />
-                {/* Time windows */}
-                {TIME_WINDOWS.map((tw) => (
-                    <button
-                        key={tw}
-                        className={`btn ${timeWindow === tw ? "btn--active" : ""}`}
-                        onClick={() => {
-                            setTimeWindow(tw);
-                            const range = useStore.getState().timeRange;
-                            pluginManager.updateTimeRange(range);
-                        }}
-                    >
-                        {tw}
-                    </button>
-                ))}
-                {/* Separator */}
-                <div style={{ width: 1, height: 20, background: "var(--border-subtle)", margin: "0 var(--space-sm)" }} />
-                {/* Config Toggle */}
-                <button
-                    className="btn btn--icon btn--glow"
-                    onClick={toggleConfigPanel}
-                    title="Data Configuration"
-                    style={{ padding: "0 8px" }}
-                >
-                    <Settings size={18} />
-                </button>
-                {/* Separator */}
-                <div style={{ width: 1, height: 20, background: "var(--border-subtle)" }} />
-                {/* Live indicator */}
-                <div className="status-badge">
-                    <span className="status-badge__dot" />
-                    LIVE
+                    {/* Separator */}
+                    <div style={{ width: 1, height: 20, background: "var(--border-subtle)" }} />
+                    {/* Live indicator */}
+                    <div className="status-badge">
+                        <span className="status-badge__dot" />
+                        LIVE
+                    </div>
                 </div>
             </div>
         </header>

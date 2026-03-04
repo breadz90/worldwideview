@@ -8,6 +8,8 @@ export function DataConfigPanel() {
     const updateDataConfig = useStore((s) => s.updateDataConfig);
     const setPollingInterval = useStore((s) => s.setPollingInterval);
     const layers = useStore((s) => s.layers);
+    const mapConfig = useStore((s) => s.mapConfig);
+    const updateMapConfig = useStore((s) => s.updateMapConfig);
 
     const enabledPlugins = Object.entries(dataConfig.pollingIntervals).filter(
         ([pluginId]) => layers[pluginId]?.enabled
@@ -124,6 +126,20 @@ export function DataConfigPanel() {
                         </div>
                     );
                 })}
+            </div>
+
+            {/* Map Overlays */}
+            <div style={{ marginBottom: "var(--space-lg)" }}>
+                <div style={sectionHeaderStyle}>Map Overlays</div>
+                <div style={inputGroupStyle}>
+                    <label style={labelStyle}>Show Labels & Borders</label>
+                    <input
+                        type="checkbox"
+                        checked={mapConfig?.showLabels || false}
+                        onChange={(e) => updateMapConfig({ showLabels: e.target.checked })}
+                        style={checkboxStyle}
+                    />
+                </div>
             </div>
         </aside>
     );

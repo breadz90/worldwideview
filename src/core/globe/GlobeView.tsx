@@ -28,6 +28,7 @@ import {
     CullingVolume,
     BoundingSphere,
     Intersect,
+    IonImageryProvider,
 } from "cesium";
 import type { Viewer as CesiumViewer } from "cesium";
 import { useStore } from "@/core/state/store";
@@ -66,6 +67,8 @@ export default function GlobeView() {
     const setSelectedEntity = useStore((s) => s.setSelectedEntity);
     const entitiesByPlugin = useStore((s) => s.entitiesByPlugin);
     const layers = useStore((s) => s.layers);
+    const showLabels = useStore((s) => s.mapConfig.showLabels);
+    const labelsLayerRef = useRef<import("cesium").ImageryLayer | null>(null);
 
     // Collect all visible entities
     const visibleEntities: Array<{ entity: GeoEntity; options: CesiumEntityOptions }> = [];
@@ -145,6 +148,26 @@ export default function GlobeView() {
             handlerRef.current?.destroy();
         };
     }, [setSelectedEntity]);
+
+    // Handle Native Labels Layer
+    useEffect(() => {
+        const viewer = viewerRef.current;
+        if (!viewer) return;
+
+        if (showLabels) {
+            if (!labelsLayerRef.current) {
+                IonImageryProvider.fromAssetId(2411391).then((provider) => {
+                    if (!viewerRef.current || !showLabels) return;
+                    labelsLayerRef.current = viewer.imageryLayers.addImageryProvider(provider);
+                });
+            }
+        } else {
+            if (labelsLayerRef.current) {
+                viewer.imageryLayers.remove(labelsLayerRef.current);
+                labelsLayerRef.current = null;
+            }
+        }
+    }, [showLabels]);
 
     // Init Google 3D tiles
     const handleViewerReady = useCallback(async (viewer: CesiumViewer) => {

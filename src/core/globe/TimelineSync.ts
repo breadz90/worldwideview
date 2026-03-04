@@ -27,32 +27,33 @@ export function TimelineSync() {
         if (!isPlaying) return;
 
         let rafId: number;
+        lastUpdateRef.current = Date.now();
 
         const tick = () => {
             const now = Date.now();
             const deltaMs = now - lastUpdateRef.current;
             lastUpdateRef.current = now;
 
+            const state = useStore.getState();
             // Calculate new time based on speed multiplier
-            const addedTimeMs = deltaMs * playbackSpeed;
-            const newTime = new Date(currentTime.getTime() + addedTimeMs);
+            const addedTimeMs = deltaMs * state.playbackSpeed;
+            const newTime = new Date(state.currentTime.getTime() + addedTimeMs);
 
             // Stop if reached end of window
-            if (newTime.getTime() >= timeRange.end.getTime()) {
-                setCurrentTime(timeRange.end);
-                setPlaying(false);
+            if (newTime.getTime() >= state.timeRange.end.getTime()) {
+                state.setCurrentTime(state.timeRange.end);
+                state.setPlaying(false);
             } else {
-                setCurrentTime(newTime);
+                state.setCurrentTime(newTime);
             }
 
             rafId = requestAnimationFrame(tick);
         };
 
-        lastUpdateRef.current = Date.now();
         rafId = requestAnimationFrame(tick);
 
         return () => cancelAnimationFrame(rafId);
-    }, [isPlaying, playbackSpeed, currentTime, timeRange.end, setCurrentTime, setPlaying]);
+    }, [isPlaying]);
 
     // Sync to plugins? Currently plugins fetch entire time ranges and store them.
     // Real-time updates could notify plugins to re-fetch on timeRange changes.

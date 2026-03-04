@@ -60,7 +60,7 @@ export function SearchBar() {
     }, []);
 
     // Flattened results for keyboard navigation
-    const flatResults = sections.flatMap(s => s.results);
+    const flatResults = sections.flatMap((s) => s.results);
 
     useEffect(() => {
         if (!query.trim()) {
@@ -69,106 +69,129 @@ export function SearchBar() {
             return;
         }
 
-        const newSections: SearchSection[] = [];
         const lowerQuery = query.toLowerCase();
+        let isStale = false;
 
-        // 1. Search Countries
-        const countryResults: SearchResult[] = [];
-        for (const country of COUNTRIES) {
-            const nameScore = calculateScore(lowerQuery, country.name);
-            const isoScore = calculateScore(lowerQuery, country.isoCode);
-            const maxScore = Math.max(nameScore, isoScore);
-            if (maxScore > 0) {
-                countryResults.push({
-                    id: country.id,
-                    label: country.name,
-                    subLabel: country.isoCode,
-                    score: maxScore,
-                    lat: country.lat,
-                    lon: country.lon,
-                    type: "country",
-                });
-            }
-        }
-        if (countryResults.length > 0) {
-            countryResults.sort((a, b) => b.score - a.score);
-            newSections.push({
-                title: "Countries",
-                icon: <MapPin size={16} />,
-                results: countryResults.slice(0, 5),
-                maxScore: countryResults[0].score,
-            });
-        }
+        const fetchResults = async () => {
+            const newSections: SearchSection[] = [];
 
-        // 2. Search Entities per Plugin
-        const entitiesByPlugin = useStore.getState().entitiesByPlugin;
-        for (const [pluginId, entities] of Object.entries(entitiesByPlugin)) {
-            const pluginResults: SearchResult[] = [];
-            const managedNode = pluginManager.getPlugin(pluginId);
-            if (!managedNode) continue;
+            // 1. Search Entities per Plugin (Local)
+            const entitiesByPlugin = useStore.getState().entitiesByPlugin;
+            for (const [pluginId, entities] of Object.entries(entitiesByPlugin)) {
+                const pluginResults: SearchResult[] = [];
+                const managedNode = pluginManager.getPlugin(pluginId);
+                if (!managedNode) continue;
 
-            const isLayerEnabled = layers[pluginId]?.enabled;
-            if (!isLayerEnabled) continue; // Only search active layers
+                const isLayerEnabled = layers[pluginId]?.enabled;
+                if (!isLayerEnabled) continue; // Only search active layers
 
-            for (const entity of entities) {
-                let maxScore = calculateScore(lowerQuery, entity.label || entity.id);
+                for (const entity of entities) {
+                    let maxScore = calculateScore(lowerQuery, entity.label || entity.id);
 
-                // Check properties (like mmsi, callsign, etc.)
-                if (entity.properties) {
-                    for (const val of Object.values(entity.properties)) {
-                        if (typeof val === "string" || typeof val === "number") {
-                            const propScore = calculateScore(lowerQuery, String(val));
-                            if (propScore > maxScore) maxScore = propScore;
+                    // Check properties (like mmsi, callsign, etc.)
+                    if (entity.properties) {
+                        for (const val of Object.values(entity.properties)) {
+                            if (typeof val === "string" || typeof val === "number") {
+                                const propScore = calculateScore(lowerQuery, String(val));
+                                if (propScore > maxScore) maxScore = propScore;
+                            }
                         }
+                    }
+
+                    if (maxScore > 0) {
+                        pluginResults.push({
+                            id: entity.id,
+                            label: entity.label || entity.id,
+                            score: maxScore,
+                            lat: entity.latitude,
+                            lon: entity.longitude,
+                            type: "entity",
+                            pluginId: pluginId,
+                            entity: entity,
+                        });
                     }
                 }
 
-                if (maxScore > 0) {
-                    pluginResults.push({
-                        id: entity.id,
-                        label: entity.label || entity.id,
-                        score: maxScore,
-                        lat: entity.latitude,
-                        lon: entity.longitude,
-                        type: "entity",
-                        pluginId: pluginId,
-                        entity: entity,
+                if (pluginResults.length > 0) {
+                    pluginResults.sort((a, b) => b.score - a.score);
+                    const PluginIcon = managedNode.plugin.icon;
+                    newSections.push({
+                        title: managedNode.plugin.name,
+                        icon: typeof PluginIcon === "string" ? <span>{PluginIcon}</span> : PluginIcon ? <PluginIcon size={16} /> : <MapPin size={16} />,
+                        results: pluginResults.slice(0, 5),
+                        maxScore: pluginResults[0].score,
                     });
                 }
             }
 
-            if (pluginResults.length > 0) {
-                pluginResults.sort((a, b) => b.score - a.score);
-                const PluginIcon = managedNode.plugin.icon;
-                newSections.push({
-                    title: managedNode.plugin.name,
-                    icon: typeof PluginIcon === "string" ? <span>{PluginIcon}</span> : PluginIcon ? <PluginIcon size={16} /> : <MapPin size={16} />,
-                    results: pluginResults.slice(0, 5),
-                    maxScore: pluginResults[0].score,
-                });
-            }
-        }
+            // 2. Search Locations (Google Places API)
+            try {
+                const res = await fetch(`/api/places/search?input=${encodeURIComponent(query)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.predictions && data.predictions.length > 0 && !isStale) {
+                        const locationResults: SearchResult[] = data.predictions.map((p: any, index: number) => ({
+                            id: p.placeId,
+                            label: p.mainText,
+                            subLabel: p.secondaryText,
+                            score: 100 - index, // Rely on Google's sorting, just give them artificial scores
+                            lat: 0, // Will fetch on select
+                            lon: 0,
+                            type: "country", // Use same type for now for styling/logic
+                        }));
 
-        // Sort sections by top score
-        newSections.sort((a, b) => b.maxScore - a.maxScore);
-        setSections(newSections);
-        setSelectedIndex(0); // Reset selection to first item
+                        newSections.push({
+                            title: "Locations",
+                            icon: <MapPin size={16} />,
+                            results: locationResults.slice(0, 5),
+                            maxScore: locationResults[0].score,
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching places:", err);
+            }
+
+            if (isStale) return;
+
+            // Sort sections by top score
+            newSections.sort((a, b) => b.maxScore - a.maxScore);
+            setSections(newSections);
+            setSelectedIndex(0); // Reset selection to first item
+        };
+
+        const debounceTimer = setTimeout(fetchResults, 300);
+
+        return () => {
+            isStale = true;
+            clearTimeout(debounceTimer);
+        };
     }, [query, layers]); // Re-run if query or active layers change
 
-    const handleSelect = (result: SearchResult) => {
+    const handleSelect = async (result: SearchResult) => {
         setIsOpen(false);
         setQuery(""); // Clear for now
 
-        // Fly to location
-        // For countries, zoom out a bit (e.g. altitude 5000000)
-        // For entities, zoom in closer (e.g. altitude 50000)
-        const altitude = result.type === "country" ? 5000000 : 50000;
-        setCameraPosition(result.lat, result.lon, altitude);
-
         if (result.type === "entity" && result.entity) {
+            setCameraPosition(result.lat, result.lon, 50000);
             setSelectedEntity(result.entity);
-        } else {
+        } else if (result.type === "country") {
             setSelectedEntity(null);
+            // Fetch Details for coordinates
+            try {
+                const res = await fetch(`/api/places/details?place_id=${result.id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.lat && data.lon) {
+                        // Zoom closer for cities, further for countries/regions
+                        const isCity = data.types?.includes("locality");
+                        const altitude = isCity ? 50000 : 5000000;
+                        setCameraPosition(data.lat, data.lon, altitude);
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching place details:", err);
+            }
         }
     };
 

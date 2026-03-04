@@ -94,9 +94,15 @@ interface DataSlice {
 }
 
 // ─── Config Slice ────────────────────────────────────────────
+interface MapConfig {
+    showLabels: boolean;
+}
+
 interface ConfigSlice {
     dataConfig: DataConfig;
+    mapConfig: MapConfig;
     updateDataConfig: (config: Partial<DataConfig>) => void;
+    updateMapConfig: (config: Partial<MapConfig>) => void;
     setPollingInterval: (pluginId: string, intervalMs: number) => void;
 }
 
@@ -232,9 +238,16 @@ export const useStore = create<AppStore>((set, get) => ({
             showTimelineHighlight: true,
         },
     },
+    mapConfig: {
+        showLabels: false,
+    },
     updateDataConfig: (config) =>
         set((state) => ({
             dataConfig: { ...state.dataConfig, ...config },
+        })),
+    updateMapConfig: (config) =>
+        set((state) => ({
+            mapConfig: { ...state.mapConfig, ...config },
         })),
     setPollingInterval: (pluginId, intervalMs) =>
         set((state) => ({

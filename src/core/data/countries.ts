@@ -13,7 +13,7 @@ export const COUNTRIES: CountryData[] = [
     { "id": "country-ag", "isoCode": "AG", "name": "Antigua and Barbuda", "lat": 17.060816, "lon": -61.796428 },
     { "id": "country-ai", "isoCode": "AI", "name": "Anguilla", "lat": 18.220554, "lon": -63.068615 },
     { "id": "country-al", "isoCode": "AL", "name": "Albania", "lat": 41.153332, "lon": 20.168331 },
-    { "id": "country-am", "isoCode": "AM", "name": "Armenia", "lat": 40.069099, "lat": 45.038189, "lon": 45.038189 },
+    { "id": "country-am", "isoCode": "AM", "name": "Armenia", "lat": 40.069099, "lon": 45.038189 },
     { "id": "country-an", "isoCode": "AN", "name": "Netherlands Antilles", "lat": 12.226079, "lon": -69.060087 },
     { "id": "country-ao", "isoCode": "AO", "name": "Angola", "lat": -11.202692, "lon": 17.873887 },
     { "id": "country-aq", "isoCode": "AQ", "name": "Antarctica", "lat": -75.250973, "lon": -0.071389 },
