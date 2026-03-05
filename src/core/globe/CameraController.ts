@@ -2,6 +2,8 @@ import {
     Cartesian3,
     Math as CesiumMath,
     Matrix4,
+    BoundingSphere,
+    HeadingPitchRange,
 } from "cesium";
 import type { Viewer as CesiumViewer } from "cesium";
 import { dataBus } from "@/core/data/DataBus";
@@ -108,14 +110,16 @@ export function goToEntity(
     lon: number,
     alt = 0
 ): void {
-    const viewDistance = Math.max(50000, alt * 3 + 30000);
-    viewer.camera.flyTo({
-        destination: Cartesian3.fromDegrees(lon, lat, alt + viewDistance),
-        orientation: {
-            heading: CesiumMath.toRadians(0),
-            pitch: CesiumMath.toRadians(-45),
-            roll: 0,
-        },
+    const target = Cartesian3.fromDegrees(lon, lat, alt);
+    const bs = new BoundingSphere(target, 0);
+    const hpr = new HeadingPitchRange(
+        CesiumMath.toRadians(0),
+        CesiumMath.toRadians(-45),
+        Math.max(50000, alt * 3 + 30000)
+    );
+
+    viewer.camera.flyToBoundingSphere(bs, {
+        offset: hpr,
         duration: 1.5,
     });
 }
