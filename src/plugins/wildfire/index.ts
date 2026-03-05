@@ -6,6 +6,7 @@ import type {
     PluginContext,
     LayerConfig,
     CesiumEntityOptions,
+    FilterDefinition,
 } from "@/core/plugins/PluginTypes";
 
 function frpToColor(frp: number): string {
@@ -104,5 +105,39 @@ export class WildfirePlugin implements WorldPlugin {
             outlineColor: "#000000",
             outlineWidth: 1,
         };
+    }
+
+    getFilterDefinitions(): FilterDefinition[] {
+        return [
+            {
+                id: "frp",
+                label: "Fire Radiative Power (MW)",
+                type: "range",
+                propertyKey: "frp",
+                range: { min: 0, max: 500, step: 10 },
+            },
+            {
+                id: "confidence",
+                label: "Confidence",
+                type: "select",
+                propertyKey: "confidence",
+                options: [
+                    { value: "low", label: "Low" },
+                    { value: "nominal", label: "Nominal" },
+                    { value: "high", label: "High" },
+                ],
+            },
+            {
+                id: "satellite",
+                label: "Satellite",
+                type: "select",
+                propertyKey: "satellite",
+                options: [
+                    { value: "N", label: "Suomi NPP" },
+                    { value: "1", label: "NOAA-20" },
+                    { value: "2", label: "NOAA-21" },
+                ],
+            },
+        ];
     }
 }

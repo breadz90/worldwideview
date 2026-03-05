@@ -3,6 +3,7 @@ import type {
     GeoEntity,
     TimeRange,
     TimeWindow,
+    FilterValue,
 } from "@/core/plugins/PluginTypes";
 
 // ─── Data Configuration ──────────────────────────────────────
@@ -78,14 +79,24 @@ interface UISlice {
     leftSidebarOpen: boolean;
     rightSidebarOpen: boolean;
     configPanelOpen: boolean;
+    filterPanelOpen: boolean;
     selectedEntity: GeoEntity | null;
     hoveredEntity: GeoEntity | null;
     hoveredScreenPosition: { x: number; y: number } | null;
     toggleLeftSidebar: () => void;
     toggleRightSidebar: () => void;
     toggleConfigPanel: () => void;
+    toggleFilterPanel: () => void;
     setSelectedEntity: (entity: GeoEntity | null) => void;
     setHoveredEntity: (entity: GeoEntity | null, screenPos?: { x: number; y: number } | null) => void;
+}
+
+// ─── Filter Slice ────────────────────────────────────────────
+interface FilterSlice {
+    filters: Record<string, Record<string, FilterValue>>; // pluginId → filterId → value
+    setFilter: (pluginId: string, filterId: string, value: FilterValue) => void;
+    clearFilters: (pluginId: string) => void;
+    clearAllFilters: () => void;
 }
 
 // ─── Data Slice ──────────────────────────────────────────────
@@ -115,7 +126,7 @@ interface ConfigSlice {
 }
 
 // ─── Combined Store ──────────────────────────────────────────
-type AppStore = GlobeSlice & LayersSlice & TimelineSlice & UISlice & DataSlice & ConfigSlice;
+type AppStore = GlobeSlice & LayersSlice & TimelineSlice & UISlice & DataSlice & ConfigSlice & FilterSlice;
 
 function getTimeRange(window: TimeWindow): TimeRange {
     const now = new Date();
@@ -201,6 +212,7 @@ export const useStore = create<AppStore>((set, get) => ({
     leftSidebarOpen: true,
     rightSidebarOpen: false,
     configPanelOpen: false,
+    filterPanelOpen: false,
     selectedEntity: null,
     hoveredEntity: null,
     hoveredScreenPosition: null,
@@ -210,10 +222,32 @@ export const useStore = create<AppStore>((set, get) => ({
         set((state) => ({ rightSidebarOpen: !state.rightSidebarOpen })),
     toggleConfigPanel: () =>
         set((state) => ({ configPanelOpen: !state.configPanelOpen })),
+    toggleFilterPanel: () =>
+        set((state) => ({ filterPanelOpen: !state.filterPanelOpen })),
     setSelectedEntity: (entity) =>
         set({ selectedEntity: entity, rightSidebarOpen: entity !== null }),
     setHoveredEntity: (entity, screenPos) =>
         set({ hoveredEntity: entity, hoveredScreenPosition: screenPos ?? null }),
+
+    // ── Filters ──────────────────────────────────────────────
+    filters: {},
+    setFilter: (pluginId, filterId, value) =>
+        set((state) => ({
+            filters: {
+                ...state.filters,
+                [pluginId]: {
+                    ...state.filters[pluginId],
+                    [filterId]: value,
+                },
+            },
+        })),
+    clearFilters: (pluginId) =>
+        set((state) => {
+            const copy = { ...state.filters };
+            delete copy[pluginId];
+            return { filters: copy };
+        }),
+    clearAllFilters: () => set({ filters: {} }),
 
     // ── Data ─────────────────────────────────────────────────
     entitiesByPlugin: {},

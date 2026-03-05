@@ -44,6 +44,7 @@ import { useStore } from "@/core/state/store";
 import { dataBus } from "@/core/data/DataBus";
 import { pluginManager } from "@/core/plugins/PluginManager";
 import type { GeoEntity, CesiumEntityOptions } from "@/core/plugins/PluginTypes";
+import { applyFilters } from "@/core/filters/filterEngine";
 
 // Set Cesium Ion token
 if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_CESIUM_TOKEN) {
@@ -86,6 +87,7 @@ export default function GlobeView() {
     const msaaSamples = useStore((s) => s.mapConfig.msaaSamples);
     const enableFxaa = useStore((s) => s.mapConfig.enableFxaa);
     const maxScreenSpaceError = useStore((s) => s.mapConfig.maxScreenSpaceError);
+    const filters = useStore((s) => s.filters);
     const bordersDataSourceRef = useRef<import("cesium").GeoJsonDataSource | null>(null);
     const trailEntityRef = useRef<CesiumEntity | null>(null);
 
@@ -95,13 +97,16 @@ export default function GlobeView() {
         pluginManager.getAllPlugins().forEach((managed) => {
             if (!layers[managed.plugin.id]?.enabled) return;
             const entities = entitiesByPlugin[managed.plugin.id] || [];
-            entities.forEach((entity) => {
+            const defs = managed.plugin.getFilterDefinitions?.() || [];
+            const active = filters[managed.plugin.id] || {};
+            const filtered = applyFilters(entities, defs, active);
+            filtered.forEach((entity) => {
                 const options = managed.plugin.renderEntity(entity);
                 result.push({ entity, options });
             });
         });
         return result;
-    }, [layers, entitiesByPlugin]);
+    }, [layers, entitiesByPlugin, filters]);
 
     // Fly to camera preset
     const flyToPreset = useCallback((presetId: string) => {

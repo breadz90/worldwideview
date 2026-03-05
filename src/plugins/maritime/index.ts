@@ -6,6 +6,7 @@ import type {
     PluginContext,
     LayerConfig,
     CesiumEntityOptions,
+    FilterDefinition,
 } from "@/core/plugins/PluginTypes";
 
 const VESSEL_COLORS: Record<string, string> = {
@@ -121,5 +122,33 @@ export class MaritimePlugin implements WorldPlugin {
             labelText: entity.label || undefined,
             labelFont: "11px JetBrains Mono, monospace",
         };
+    }
+
+    getFilterDefinitions(): FilterDefinition[] {
+        return [
+            {
+                id: "vessel_type",
+                label: "Vessel Type",
+                type: "select",
+                propertyKey: "vesselType",
+                options: [
+                    { value: "cargo", label: "Cargo" },
+                    { value: "tanker", label: "Tanker" },
+                    { value: "passenger", label: "Passenger" },
+                    { value: "fishing", label: "Fishing" },
+                    { value: "military", label: "Military" },
+                    { value: "sailing", label: "Sailing" },
+                    { value: "tug", label: "Tug" },
+                    { value: "other", label: "Other" },
+                ],
+            },
+            {
+                id: "speed",
+                label: "Speed (knots)",
+                type: "range",
+                propertyKey: "speed_knots",
+                range: { min: 0, max: 30, step: 1 },
+            },
+        ];
     }
 }

@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useStore } from "@/core/state/store";
 import { dataBus } from "@/core/data/DataBus";
 import { pluginManager } from "@/core/plugins/PluginManager";
-import { Globe, Menu, Settings } from "lucide-react";
+import { Globe, Menu, Settings, Filter } from "lucide-react";
 import { SearchBar } from "./SearchBar";
 
 const REGIONS = [
@@ -25,6 +25,9 @@ export function Header() {
     const setTimeWindow = useStore((s) => s.setTimeWindow);
     const toggleLeftSidebar = useStore((s) => s.toggleLeftSidebar);
     const toggleConfigPanel = useStore((s) => s.toggleConfigPanel);
+    const filterCount = useStore((s) =>
+        Object.values(s.filters).reduce((sum, pf) => sum + Object.keys(pf).length, 0)
+    );
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -109,6 +112,18 @@ export function Header() {
                         title="Data Configuration"
                     >
                         <Settings size={18} />
+                    </button>
+                    {/* Filter Toggle */}
+                    <button
+                        className="btn btn--icon btn--glow"
+                        onClick={toggleConfigPanel}
+                        title="Entity Filters"
+                        style={{ position: "relative" }}
+                    >
+                        <Filter size={18} />
+                        {filterCount > 0 && (
+                            <span className="filter-badge filter-badge--header">{filterCount}</span>
+                        )}
                     </button>
                     {/* Separator */}
                     <div style={{ width: 1, height: 20, background: "var(--border-subtle)" }} />

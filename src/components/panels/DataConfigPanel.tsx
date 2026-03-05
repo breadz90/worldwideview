@@ -1,6 +1,7 @@
 "use client";
 
 import { useStore } from "@/core/state/store";
+import { FilterSection } from "./FilterPanel";
 
 export function DataConfigPanel() {
     const configPanelOpen = useStore((s) => s.configPanelOpen);
@@ -22,6 +23,12 @@ export function DataConfigPanel() {
             style={{ width: 320, padding: "var(--space-xl)", zIndex: 101, borderLeft: "var(--glass-border)" }}
         >
             <div className="sidebar__title" style={{ marginBottom: "var(--space-md)", color: "var(--text-primary)", fontSize: "14px", fontWeight: 600 }}>Data Configuration</div>
+
+            {/* Entity Filters */}
+            <div style={{ marginBottom: "var(--space-lg)" }}>
+                <div style={sectionHeaderStyle}>Entity Filters</div>
+                <FilterSection />
+            </div>
 
             {/* Active Layer Configurations */}
             <div style={{ marginBottom: "var(--space-lg)" }}>
