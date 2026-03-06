@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { Header } from "./Header";
 import { LayerPanel } from "@/components/panels/LayerPanel";
 import { EntityInfoCard } from "@/components/panels/EntityInfoCard";
-import { DataConfigPanel } from "@/components/panels/DataConfigPanel";
+import { DataConfigPanel } from "@/components/panels/DataConfig";
 import CameraStatsPanel from "@/components/panels/CameraStatsPanel";
 import { Timeline } from "@/components/timeline/Timeline";
 import { TimelineSync } from "@/core/globe/TimelineSync";
@@ -20,6 +20,41 @@ import { dataBus } from "@/core/data/DataBus";
 import { PanelToggleArrows } from "@/components/layout/PanelToggleArrows";
 import { FloatingVideoManager } from "@/components/video/FloatingVideoManager";
 import dynamic from "next/dynamic";
+
+// A small functional component strictly for subscribing to non-rendering state/events
+function DataBusSubscriber() {
+    const setPollingInterval = useStore((s) => s.setPollingInterval);
+    const setEntities = useStore((s) => s.setEntities);
+    const setEntityCount = useStore((s) => s.setEntityCount);
+    const cacheMaxAge = useStore((s) => s.dataConfig.cacheMaxAge);
+
+    useEffect(() => {
+        // Sync cache limit any time the UI setting changes
+        pluginManager.setCacheMaxAge(cacheMaxAge);
+    }, [cacheMaxAge]);
+
+    useEffect(() => {
+        const unsubReg = dataBus.on("pluginRegistered", ({ pluginId, defaultInterval }) => {
+            // Only set if we don't already have one (e.g. from persisted state later)
+            const currentIntervals = useStore.getState().dataConfig.pollingIntervals;
+            if (!currentIntervals[pluginId]) {
+                setPollingInterval(pluginId, defaultInterval);
+            }
+        });
+
+        const unsubData = dataBus.on("dataUpdated", ({ pluginId, entities }) => {
+            setEntities(pluginId, entities);
+            setEntityCount(pluginId, entities.length);
+        });
+
+        return () => {
+            unsubReg();
+            unsubData();
+        };
+    }, [setPollingInterval, setEntities, setEntityCount]);
+
+    return null;
+}
 
 // Dynamically import GlobeView with SSR disabled (CesiumJS requires window)
 const GlobeView = dynamic(() => import("@/core/globe/GlobeView"), {
@@ -71,13 +106,7 @@ export function AppShell() {
 
         startPlatform();
 
-        const unsubData = dataBus.on("dataUpdated", ({ pluginId, entities }) => {
-            useStore.getState().setEntities(pluginId, entities);
-            useStore.getState().setEntityCount(pluginId, entities.length);
-        });
-
         return () => {
-            unsubData();
             pluginManager.destroy();
         };
     }, [initLayer]);
@@ -91,6 +120,7 @@ export function AppShell() {
 
             {/* Logic Syncs */}
             <TimelineSync />
+            <DataBusSubscriber />
 
             {/* Foreground UI Components */}
             <PanelToggleArrows />

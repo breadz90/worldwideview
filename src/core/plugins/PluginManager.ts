@@ -7,7 +7,6 @@ import type {
 import { dataBus } from "@/core/data/DataBus";
 import { pollingManager } from "@/core/data/PollingManager";
 import { cacheLayer } from "@/core/data/CacheLayer";
-import { useStore } from "@/core/state/store";
 
 interface ManagedPlugin {
     plugin: WorldPlugin;
@@ -24,6 +23,7 @@ interface ManagedPlugin {
 class PluginManager {
     private plugins: Map<string, ManagedPlugin> = new Map();
     private initialized = false;
+    private configCacheMaxAge = 3600000;
 
     async init(): Promise<void> {
         if (this.initialized) return;
@@ -64,11 +64,11 @@ class PluginManager {
             console.error(`[PluginManager] Failed to initialize "${plugin.id}":`, err);
         }
 
-        // Populate store with the plugin's polling interval (so it's not hardcoded)
-        const currentIntervals = useStore.getState().dataConfig.pollingIntervals;
-        if (!currentIntervals[plugin.id]) {
-            useStore.getState().setPollingInterval(plugin.id, plugin.getPollingInterval());
-        }
+        // Emit an event that a plugin was registered so the external store can assign default polling intervals
+        dataBus.emit("pluginRegistered", {
+            pluginId: plugin.id,
+            defaultInterval: plugin.getPollingInterval()
+        });
 
         // Register polling
         pollingManager.register(
@@ -159,6 +159,10 @@ class PluginManager {
         await Promise.allSettled(promises);
     }
 
+    setCacheMaxAge(age: number): void {
+        this.configCacheMaxAge = age;
+    }
+
     destroy(): void {
         pollingManager.stopAll();
         this.plugins.forEach((managed) => {
@@ -175,9 +179,8 @@ class PluginManager {
         const managed = this.plugins.get(pluginId);
         if (!managed) return;
         managed.entities = entities;
-        // Use the configured cacheMaxAge instead of just 2x polling interval
-        const cacheMaxAge = useStore.getState().dataConfig.cacheMaxAge || 3600000;
-        cacheLayer.set(pluginId, entities, cacheMaxAge);
+
+        cacheLayer.set(pluginId, entities, this.configCacheMaxAge);
         dataBus.emit("dataUpdated", { pluginId, entities });
     }
 }
